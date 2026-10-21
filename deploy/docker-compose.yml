@@ -1,0 +1,125 @@
+# Kairos: запуск на сервере. Все команды `docker compose ...` выполняются из каталога deploy/
+# (там же должен лежать .env — ссылка на ../.env, см. deploy/README.md), чтобы подставился POSTGRES_PASSWORD.
+name: kairos
+
+# Ротация логов: не больше 3 файлов по 10 МБ на контейнер, диск не забивается.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  db:
+    image: timescale/timescaledb:latest-pg17   # не timescaledb-ha: часть его тегов только под x86
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kairos
+      POSTGRES_DB: kairos
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Задайте POSTGRES_PASSWORD в .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # ports НЕ публикуем: база доступна только внутри сети compose (хост `db`).
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    logging: *default-logging
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    # ports НЕ публикуем.
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    logging: *default-logging
+
+  backend:
+    build:
+      context: ../backend
+    image: kairos-backend:latest
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    env_file:
+      - ../.env          # FRONTRUN_API_KEY, HELIUS_API_KEY и т. д. (читает pydantic-settings в kairos/config.py)
+    environment:
+      # environment перекрывает env_file: даже если в .env остался локальный DATABASE_URL
+      # (localhost:5434), в контейнере будет адрес сервиса db.
+      DATABASE_URL: postgresql://kairos:${POSTGRES_PASSWORD:?Задайте POSTGRES_PASSWORD в .env}@db:5432/kairos
+      # Пока код Redis не использует (в config.py такой настройки нет, лишние переменные игнорируются).
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    logging: *default-logging
+
+  # Telegram-бот (kairos/bot). Тот же образ, что у backend; миграции применяет backend.
+  # Профиль bot: при обычном `docker compose up -d` бот не запускается. Когда в .env есть TELEGRAM_BOT_TOKEN:
+  #   docker compose --profile bot up -d bot
+  bot:
+    image: kairos-backend:latest
+    profiles: ["bot"]
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    command: ["python", "-m", "kairos.bot"]
+    env_file:
+      - ../.env          # TELEGRAM_BOT_TOKEN, BOT_ALLOWLIST, ANTHROPIC_API_KEY (необязательно)
+    environment:
+      DATABASE_URL: postgresql://kairos:${POSTGRES_PASSWORD:?Задайте POSTGRES_PASSWORD в .env}@db:5432/kairos
+    depends_on:
+      db:
+        condition: service_healthy
+      backend:
+        condition: service_started
+    logging: *default-logging
+
+  web:
+    build:
+      context: ../web
+    image: kairos-web:latest
+    restart: unless-stopped
+    init: true
+    environment:
+      # Дашборд /app читает базу под ролью kairos_ro (только SELECT, read-only транзакции).
+      DATABASE_URL_RO: postgresql://kairos_ro:${KAIROS_RO_PASSWORD:?Задайте KAIROS_RO_PASSWORD в .env}@db:5432/kairos
+      # С 21.10.2026 дашборд открыт без входа: DASHBOARD_SECRET и DASHBOARD_USERS больше не нужны.
+    depends_on:
+      db:
+        condition: service_healthy
+    # ports НЕ публикуем: наружу сайт отдаёт только caddy.
+    logging: *default-logging
+
+  # HTTPS для xkairos.io (сертификаты Let's Encrypt получает сам Caddy, см. deploy/Caddyfile).
+  # В ufw открыты 80/tcp, 443/tcp и 443/udp (HTTP/3).
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+    logging: *default-logging
+
+volumes:
+  pgdata:
+  redisdata:
+  caddy_data:
+  caddy_config:

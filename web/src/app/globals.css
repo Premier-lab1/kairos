@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+/* Kairos design tokens. Dark base, one orange accent, mono for data. */
+@theme {
+  --color-ink: #0a0a0a;
+  --color-ink-2: #111111;
+  --color-ink-3: #181818;
+  --color-line: #262626;
+  --color-paper: #ededeb;
+  --color-paper-2: #e2e2df;
+  --color-paper-line: #cfcfcb;
+  --color-fg: #ededeb;
+  --color-muted: #8a8a85;
+  --color-accent: #ff4f17;
+  --color-accent-soft: #ff4f1726;
+  /* outcome colours (graph, card, bot) */
+  --color-win: #5be49b;
+  --color-warn: #f2c94c;
+  --color-rug: #e5484d;
+  --color-flat: #6b6b67;
+
+  --font-sans: var(--font-inter-tight), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --breakpoint-xs: 360px;
+}
+
+html {
+  background: var(--color-ink);
+  color: var(--color-fg);
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+body {
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: var(--color-ink);
+}
+
+/* Section headline: heavy + light in one line, uppercase. */
+.headline {
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: -0.035em;
+  line-height: 0.92;
+  font-size: clamp(2.4rem, 7.2vw, 6.5rem);
+  text-wrap: balance;
+}
+.headline em {
+  font-style: normal;
+  font-weight: 300;
+}
+
+.mono-label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Scroll reveal (see components/ui/Reveal.tsx). No transitions between pages. */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(28px);
+  transition:
+    opacity 0.7s cubic-bezier(0.2, 0.7, 0.2, 1),
+    transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+[data-reveal][data-visible="true"] {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* CallChart overlay (components/chart/CallChart.tsx). Plain global classes: CSS modules are not used
+   because the Tailwind turbopack loader in next.config.ts processes every *.css as global CSS. */
+.kc-call { position: absolute; width: 30px; height: 30px; pointer-events: auto; opacity: 0; transform: scale(.6); transition: opacity .25s, transform .25s; }
+.kc-call[data-visible="true"] { opacity: 1; transform: scale(1); }
+.kc-call:focus-visible { outline: 2px solid #ff4f17; outline-offset: 5px; border-radius: 50%; }
+.kc-stem { position: absolute; top: 32px; left: 14px; width: 1px; background: currentColor; opacity: .55; pointer-events: none; }
+.kc-label { position: absolute; bottom: 37px; left: -4px; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-radius: 4px; padding: 2px 4px; background: #111e; color: #ededeb; font-size: 10px; opacity: 0; pointer-events: none; }
+.kc-call:hover, .kc-call:focus { z-index: 5; }
+.kc-call:hover .kc-label, .kc-call:focus .kc-label { opacity: 1; }
+@media (min-width: 640px) { .kc-call[data-label="true"] .kc-label { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .kc-call { transition: none; } }

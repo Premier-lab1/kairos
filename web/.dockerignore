@@ -1,0 +1,7 @@
+node_modules
+.next
+.astra
+.claude
+npm-debug.log*
+*.tsbuildinfo
+.env*

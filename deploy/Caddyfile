@@ -1,0 +1,11 @@
+# HTTPS for the Kairos site. Caddy gets and renews Let's Encrypt certificates itself
+# (HTTP-01 on port 80). Behind Cloudflare: SSL/TLS mode "Full (strict)", and keep
+# "Always Use HTTPS" off until the first certificate is issued.
+xkairos.io {
+	encode zstd gzip
+	reverse_proxy web:3000
+}
+
+www.xkairos.io {
+	redir https://xkairos.io{uri} permanent
+}

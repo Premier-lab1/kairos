@@ -1,0 +1,37 @@
+[project]
+name = "kairos"
+version = "0.1.0"
+description = "Kairos: ранние сигналы по токенам Solana на основе истории шиллеров"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx==0.28.1",
+    "asyncpg==0.32.0",
+    "pydantic==2.13.5",
+    "pydantic-settings==2.16.0",
+    "websockets==17.2",
+    "orjson==3.13.0",
+    "aiogram==3.31.0",
+    "anthropic==1.15.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==9.1.1",
+    "pytest-asyncio==1.4.0",
+    "respx==0.23.1",
+]
+
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["kairos*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
+markers = ["live: обращается к внешним API (запуск: pytest -m live)"]
+addopts = "-m 'not live'"

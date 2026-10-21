@@ -1,0 +1,33 @@
+.env
+.env.*
+!.env.example
+node_modules/
+__pycache__/
+.venv/
+*.MP4
+.localdb/
+backend/.astra/*.log
+backend/.astra/usage-*.json
+web/.astra/*.log
+# локальные файлы, медиа от заказчика и артефакты сборки
+photo_*.jpg
+*.ogg
+.pytest_cache/
+*.egg-info/
+.next/
+*.tsbuildinfo
+.claude/settings.local.json
+.audit/
+
+# Внутренние документы команды: в публичный репозиторий не попадают, лежат только локально (21.10.2026)
+/Kairos.md
+**/.astra/
+/docs/night-*
+/docs/feedback-*
+/docs/fix-*
+/docs/ai-agents.md
+/docs/article-draft-*
+/docs/roadmap.md
+/docs/kairos-shiller-graph-v1.mp4
+/scripts/run-astra-am.sh
+/.claude/

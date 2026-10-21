@@ -1,0 +1,16 @@
+.dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-muted);
+  animation: typing-dot 600ms ease-in-out infinite alternate;
+}
+
+@keyframes typing-dot {
+  from { opacity: 0.3; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot { animation: none; }
+}

@@ -1,0 +1,15 @@
+# Всё, что не должно попадать в образ и раздувать контекст сборки.
+.venv/
+.localdb/
+.astra/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.egg-info/
+tests/
+.env
+.env.*
+*.MP4
+*.md
+Dockerfile
+.dockerignore
