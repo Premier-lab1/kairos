@@ -1,0 +1,55 @@
+name: Bug report
+description: Something in Kairos behaves incorrectly
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Never paste API keys, bot tokens or `.env` contents.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Backend pipeline (collection, jobs, budgets)
+        - Outcome labels
+        - Scoring / signals
+        - Telegram bot
+        - Web dashboard
+        - Deploy / Docker
+        - Docs
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Commands, a token mint, a signal id or a page URL. A failing test is ideal.
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or output
+      description: Relevant lines only, with secrets removed.
+      render: shell
+  - type: input
+    id: version
+    attributes:
+      label: Commit or version
+      placeholder: "output of git rev-parse --short HEAD"
+  - type: input
+    id: env
+    attributes:
+      label: Environment
+      placeholder: "Python 3.11, PostgreSQL 17 (TimescaleDB or plain), Node 22, Docker Compose"

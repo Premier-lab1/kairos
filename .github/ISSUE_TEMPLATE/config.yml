@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security issue
+    url: https://github.com/Premier-lab1/kairos/security/advisories/new
+    about: Report vulnerabilities privately. Please do not open a public issue.
+  - name: Product updates and questions
+    url: https://x.com/max_reporter
+    about: Kairos news and general questions are on X.

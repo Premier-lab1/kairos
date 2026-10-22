@@ -1,0 +1,120 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: backend
+
+    # Several test modules hardcode postgresql://kairos@localhost:5434/<db>, so the service
+    # listens on host port 5434 with user "kairos" and trust auth (no password).
+    # Plain PostgreSQL is enough: migration 0001 only creates hypertables when the
+    # timescaledb extension is available, and falls back to ordinary tables otherwise.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: kairos
+          POSTGRES_DB: kairos_test
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U kairos -d kairos_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      # Server part of the DSN used by the per-module test databases.
+      KAIROS_TEST_PG: postgresql://kairos@localhost:5434
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+
+      - name: Install backend with dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      # Each test module that talks to Postgres uses its own database (kairos_test,
+      # kairos_test_bot, kairos_test_helius, ...). The names are collected from the tests
+      # themselves so that a new module does not need a CI change.
+      - name: Create test databases
+        run: python ../.github/scripts/create_test_dbs.py
+
+      # pytest.ini_options already deselects tests marked "live" (they call paid external APIs).
+      - name: Run tests
+        run: python -m pytest -q
+
+  schemas:
+    name: JSON Schemas vs examples
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Validate examples against schemas
+        run: |
+          pip install jsonschema
+          python schemas/validate.py
+
+  web:
+    name: Web (lint + typecheck)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      # Same fallback as web/Dockerfile: a lockfile written on Windows can miss
+      # linux-only optional dependencies (@emnapi/*), in which case `npm ci` fails.
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund || npm install --no-audit --no-fund
+
+      - name: Lint
+        run: npm run lint
+
+      # `next typegen` generates the route types (LayoutProps<"/">, ...) and next-env.d.ts
+      # that tsc needs. It does not build the app and does not need DATABASE_URL_RO.
+      - name: Generate Next.js types
+        run: npx next typegen
+
+      - name: Typecheck
+        run: npx tsc --noEmit

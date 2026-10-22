@@ -36,7 +36,7 @@ python -m venv .venv && .venv/Scripts/pip install -e ".[dev]"
 | `kairos/pipeline/helius_tasks.py` | Задачи дозагрузки: для зашилленных и мигрировавших токенов в точках «отсчёт + 1 ч / 24 ч / 7 д + 5 мин»; токены из истории шиллеров — с пробой в 2 страницы (не Pump.fun — помечаются и больше не качаются); после загрузки — пересчёт исходов |
 | `kairos/outcomes.py` | Разметка исхода токена по правилам v1 и v2 (`docs/outcomes.md`): `compute_token_outcomes`, `compute_due_outcomes`. Горизонт размечается, только когда сделки загружены до его конца (`tokens.trades_synced_until`), иначе `pending`. Пересчёт всех токенов и сводка: `python -m kairos.outcomes --rule-version all` |
 | `kairos/scoring.py` | Скоринг s1 (`docs/signals.md`): скор 0–100, confidence, признаки в `signals.features`; без утечки будущего. Конвейер пересчитывает сигналы раз в минуту; разовый проход: `python -m kairos.scoring --once` |
-| `kairos/backtest.py` | Walk-forward бэктест скоринга: `python -m kairos.backtest --rule-version v2 --horizon 24h --delay-min 10 --out ../docs/backtest.md` |
+| `kairos/backtest.py` | Walk-forward бэктест скоринга: `python -m kairos.backtest --rule-version v2 --horizon 24h --delay-min 10 --out ../backtests/<date>.md` |
 | `kairos/bot/` | Telegram-бот (aiogram 3), см. раздел «Бот» |
 | `kairos/explain.py` | Короткие объяснения сигнала через Claude (раздел «Объяснения LLM») |
 | `kairos/report.py` | Отчёт: сводка, рейтинг шиллеров по исходам (нижняя граница Уилсона), расход кредитов: `python -m kairos.report --horizon 24h --min-tokens 3` |

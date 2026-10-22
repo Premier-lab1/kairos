@@ -1,0 +1,79 @@
+{
+  "id": 242,
+  "score": 0,
+  "features": {
+    "base": {
+      "n_final": 1,
+      "rug_rate": 0.3,
+      "default_used": true,
+      "success_rate": 0.05
+    },
+    "risks": [
+      "single_shiller",
+      "low_evidence"
+    ],
+    "token": {
+      "mint": "944fTeZPkMwdUp6yWmuk9Q9uUt44MEuerY3Efjfhpump",
+      "name": "Super Wif Inu",
+      "symbol": "WIFSI",
+      "token_id": 62582,
+      "created_at": "2026-10-20T17:20:54.469820+00:00",
+      "age_minutes": 149.4353,
+      "entry_minute": 1.8255,
+      "first_mention_at": "2026-10-20T17:22:44+00:00"
+    },
+    "inside": [
+      {
+        "rug": 0,
+        "lift": 1.0,
+        "kol_id": 6,
+        "minute": 1.8255,
+        "rug_lb": 0.0,
+        "n_final": 0,
+        "success": 0,
+        "rug_lift": 1.0,
+        "rug_rate": 0.0,
+        "username": "solhousesignals",
+        "followers": 2827,
+        "success_lb": 0.0,
+        "success_rate": 0.0,
+        "first_mention_at": "2026-10-20T17:22:44+00:00"
+      }
+    ],
+    "creator": {
+      "wallet": "81mrKGVUzzaEXwntF1pwgKjTic7kLt8UbYDWPrgqST7M",
+      "past_rug": 0,
+      "past_final": 0
+    },
+    "horizon": "24 hours",
+    "similar": [],
+    "evidence": {
+      "similar_cases": 0,
+      "best_shiller_n_final": 0,
+      "shillers_with_10plus": 0
+    },
+    "components": {
+      "entry": 0.0,
+      "breadth": 0.0,
+      "similar": 0.0,
+      "shillers": 0.0,
+      "creator_rug": 0.0,
+      "similar_rug": 0.0,
+      "rug_shillers": 0,
+      "creator_clean": 0.0
+    },
+    "n_shillers": 1,
+    "evaluated_at": "2026-10-20T19:52:10.118285+00:00",
+    "scorer_version": "s1",
+    "outcome_rule_version": "v2"
+  },
+  "token_id": 62582,
+  "confidence": "low",
+  "created_at": "2026-10-20T19:52:10.118285+00:00",
+  "n_shillers": 1,
+  "updated_at": "2026-10-20T19:52:10.118285+00:00",
+  "explanation": null,
+  "delivered_at": null,
+  "scorer_version": "s1",
+  "first_mention_at": "2026-10-20T17:22:44+00:00"
+}

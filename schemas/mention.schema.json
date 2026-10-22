@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mention.schema.json",
+  "title": "Mention (call)",
+  "description": "One tweet in which a shiller posted a contract address (`mentions` table). A \"call\" in the dashboard is the first mention of a token by a shiller. Source: backend/migrations/0001_init.sql, 0011; pipeline/frontrun_tasks.py.",
+  "type": "object",
+  "required": ["id", "kol_id", "chain", "ca", "tweet_id", "tweet_time", "is_deleted", "source", "first_seen_at"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "integer", "description": "Primary key (`mentions.id`)." },
+    "kol_id": { "type": "integer", "description": "Author (`kols.id`)." },
+    "chain": { "type": "string", "description": "Chain of the address.", "examples": ["SOLANA"] },
+    "ca": { "type": "string", "description": "Contract address exactly as in the tweet. The token may not be in `tokens` yet." },
+    "token_id": { "type": ["integer", "null"], "description": "`tokens.id`, set once the token is known (the scheduler links late arrivals)." },
+    "tweet_id": { "type": "string", "description": "X status id. (tweet_id, ca) is unique." },
+    "tweet_time": { "type": "string", "format": "date-time", "description": "When the tweet was posted. Scoring and backtests use this time, never `first_seen_at`." },
+    "content": { "type": ["string", "null"], "description": "Tweet text." },
+    "is_deleted": { "type": "boolean", "description": "The tweet was later seen as deleted." },
+    "reply_count": { "type": ["integer", "null"] },
+    "retweet_count": { "type": ["integer", "null"] },
+    "quote_count": { "type": ["integer", "null"] },
+    "favorite_count": { "type": ["integer", "null"], "description": "Likes." },
+    "view_count": { "type": ["integer", "null"], "description": "Views, when Frontrun returns them." },
+    "source": { "enum": ["frontrun_search", "frontrun_ca_history"], "description": "`frontrun_search`: found by searching X for a token's CA. `frontrun_ca_history`: from a tracked shiller's CA history." },
+    "first_seen_at": { "type": "string", "format": "date-time", "description": "When Kairos stored the mention. The gap to `tweet_time` is the collection delay." }
+  }
+}

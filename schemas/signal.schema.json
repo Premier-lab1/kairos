@@ -1,0 +1,193 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "signal.schema.json",
+  "title": "Signal",
+  "description": "One row of the `signals` table: the s1 score of a token at its latest evaluation. One row per (token, scorer_version); it is updated in place when new shillers appear. Rules: docs/signals.md. Source: backend/migrations/0005_signals.sql, backend/kairos/scoring.py.",
+  "type": "object",
+  "required": ["id", "token_id", "created_at", "updated_at", "score", "confidence", "scorer_version", "features", "n_shillers"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "integer", "description": "Primary key (`signals.id`)." },
+    "token_id": { "type": "integer", "description": "The scored token (`tokens.id`)." },
+    "created_at": { "type": "string", "format": "date-time", "description": "When the signal first appeared (first evaluation)." },
+    "updated_at": { "type": "string", "format": "date-time", "description": "Last re-evaluation. The pipeline re-scores a token after new mentions or new shiller-wallet trades." },
+    "score": { "type": "number", "minimum": 0, "maximum": 100, "description": "Rule-based score, the sum of `features.components` clamped to 0-100 and rounded to one decimal. Set by rules and statistics only; the LLM never changes it." },
+    "confidence": { "enum": ["low", "medium", "high", null], "description": "How much evidence stands behind the score, not how good the token is. `high`: the best shiller (among those with n_final >= 5) has n_final >= 30 and a second shiller has n_final >= 10. `medium`: n_final >= 10. Otherwise `low`. The bot delivers only `medium` and `high`." },
+    "scorer_version": { "type": "string", "description": "Scoring formula version, currently `s1`.", "examples": ["s1"] },
+    "n_shillers": { "type": "integer", "minimum": 0, "description": "Number of distinct shillers who mentioned the CA by evaluation time." },
+    "first_mention_at": { "type": ["string", "null"], "format": "date-time", "description": "Time of the first tweet with the contract address by any tracked shiller." },
+    "explanation": { "type": ["string", "null"], "description": "Legacy column for an LLM text. Current explanations are cached in `signal_explanations`, so this is normally null." },
+    "delivered_at": { "type": ["string", "null"], "format": "date-time", "description": "When the signal was first sent to any Telegram subscriber; null if never delivered." },
+    "features": { "$ref": "#/$defs/features" }
+  },
+  "$defs": {
+    "features": {
+      "type": "object",
+      "description": "Everything the score was computed from, as known at `evaluated_at` (no look-ahead). Stored as `signals.features` (jsonb). Floats are rounded to 4 decimals.",
+      "required": ["scorer_version", "evaluated_at", "outcome_rule_version", "horizon", "base", "token", "inside", "n_shillers", "creator", "similar", "components", "evidence", "risks"],
+      "additionalProperties": false,
+      "properties": {
+        "scorer_version": { "type": "string", "description": "Same as the row column." },
+        "evaluated_at": { "type": "string", "format": "date-time", "description": "The moment `t` the features describe. Only data known at `t` is used." },
+        "outcome_rule_version": { "type": "string", "description": "Outcome rule set the history was read from (`token_outcomes.rule_version`), `v2` by default.", "examples": ["v2"] },
+        "horizon": { "type": "string", "description": "Outcome horizon used for shiller and creator history.", "examples": ["24 hours"] },
+        "base": {
+          "type": "object",
+          "description": "Base rates of the whole population at `t`.",
+          "required": ["success_rate", "rug_rate", "n_final", "default_used"],
+          "additionalProperties": false,
+          "properties": {
+            "success_rate": { "type": "number", "minimum": 0, "maximum": 1, "description": "Share of `success` among final first-mention outcomes known at `t` (b)." },
+            "rug_rate": { "type": "number", "minimum": 0, "maximum": 1, "description": "Share of `rug` among the same outcomes (b_rug)." },
+            "n_final": { "type": "integer", "minimum": 0, "description": "Number of final outcomes behind the two rates." },
+            "default_used": { "type": "boolean", "description": "True when fewer than 100 final outcomes exist; then success_rate = 0.05 and rug_rate = 0.3 are used instead of measured values." }
+          }
+        },
+        "token": {
+          "type": "object",
+          "description": "The scored token at `t`.",
+          "required": ["token_id", "mint", "symbol", "name", "created_at", "first_mention_at", "age_minutes", "entry_minute"],
+          "additionalProperties": false,
+          "properties": {
+            "token_id": { "type": "integer" },
+            "mint": { "type": "string", "description": "Solana mint address (base58)." },
+            "symbol": { "type": ["string", "null"] },
+            "name": { "type": ["string", "null"] },
+            "created_at": { "type": ["string", "null"], "format": "date-time", "description": "Token creation time; null when unknown (risk `unknown_creation`)." },
+            "first_mention_at": { "type": "string", "format": "date-time" },
+            "age_minutes": { "type": "number", "description": "Minutes between the first mention and `evaluated_at`. This is the number shown as `minute N` in the Telegram card header." },
+            "entry_minute": { "type": ["number", "null"], "description": "Minutes from token creation to the first mention; null when creation time is unknown." }
+          }
+        },
+        "inside": {
+          "type": "array",
+          "description": "Distinct shillers who mentioned the token before `t`, sorted by `lift` descending.",
+          "items": { "$ref": "#/$defs/shillerInside" }
+        },
+        "n_shillers": { "type": "integer", "minimum": 0, "description": "Length of `inside`." },
+        "creator": {
+          "type": "object",
+          "description": "Track record of the creator wallet: earlier tokens of the same wallet with a final outcome measured from creation, and created at least 24 h before `t`.",
+          "required": ["wallet", "past_final", "past_rug"],
+          "additionalProperties": false,
+          "properties": {
+            "wallet": { "type": ["string", "null"], "description": "Creator wallet address (public), null if unknown." },
+            "past_final": { "type": "integer", "minimum": 0, "description": "Earlier tokens of this wallet with a final label." },
+            "past_rug": { "type": "integer", "minimum": 0, "description": "How many of them were labelled `rug`." }
+          }
+        },
+        "similar": {
+          "type": "array",
+          "maxItems": 5,
+          "description": "Past tokens with a final outcome and a similar set of shillers (similarity >= 0.2). Shown for context only; weight 0 in s1.",
+          "items": {
+            "type": "object",
+            "required": ["token_id", "mint", "symbol", "similarity", "jaccard", "label", "peak_multiple"],
+            "additionalProperties": false,
+            "properties": {
+              "token_id": { "type": "integer" },
+              "mint": { "type": "string" },
+              "symbol": { "type": ["string", "null"] },
+              "similarity": { "type": "number", "minimum": 0, "maximum": 1, "description": "0.8 * jaccard + 0.2 * minute similarity." },
+              "jaccard": { "type": "number", "minimum": 0, "maximum": 1, "description": "Jaccard index of the two shiller sets." },
+              "label": { "enum": ["success", "rug", "dead", "neutral"], "description": "Final outcome label of the past token." },
+              "peak_multiple": { "type": ["number", "null"], "description": "Peak market cap / reference market cap of the past token." }
+            }
+          }
+        },
+        "components": {
+          "type": "object",
+          "description": "Score parts in points. They sum to the (unclamped) score. See the table in docs/signals.md.",
+          "required": ["shillers", "breadth", "creator_clean", "entry", "similar", "rug_shillers", "creator_rug", "similar_rug"],
+          "additionalProperties": false,
+          "properties": {
+            "shillers": { "type": "number", "minimum": 0, "maximum": 55, "description": "Up to +55 for the best shiller's lift over the base rate (only shillers with n_final >= 5)." },
+            "breadth": { "type": "number", "minimum": 0, "maximum": 20, "description": "Up to +20 for the number of distinct shillers; one shiller gives 0." },
+            "creator_clean": { "type": "number", "minimum": 0, "maximum": 10, "description": "+10 if the creator has >= 3 final past tokens and no rugs." },
+            "entry": { "type": "number", "description": "Entry-minute points. Weight 0 in s1, always 0." },
+            "similar": { "type": "number", "description": "Similar-cases points. Weight 0 in s1, always 0." },
+            "rug_shillers": { "type": "number", "minimum": -30, "maximum": 0, "description": "Up to -30 for shillers whose rug rate is above the base rate (only shillers with n_final >= 5)." },
+            "creator_rug": { "type": "number", "enum": [0, -15, -25], "description": "-15 if the creator rugged before, -25 if twice or in at least half of the past tokens." },
+            "similar_rug": { "type": "number", "description": "Weight 0 in s1, always 0." },
+            "kol_holding": { "type": "number", "minimum": 0, "maximum": 8, "description": "+4 per shiller who bought and still holds at `t`, at most +8. Added 21.10.2026; absent in older rows. 0 without wallet data." },
+            "kol_fast_dumpers": { "type": "number", "minimum": -12, "maximum": 0, "description": "-6 per fast-dumper shiller, at least -12. Absent in older rows." },
+            "kol_sold_after_call": { "type": "number", "minimum": -10, "maximum": 0, "description": "-10 once if any shiller sold within 30 minutes of their post. Absent in older rows." }
+          }
+        },
+        "evidence": {
+          "type": "object",
+          "description": "Counts that decide `confidence`.",
+          "required": ["best_shiller_n_final", "shillers_with_10plus", "similar_cases"],
+          "additionalProperties": false,
+          "properties": {
+            "best_shiller_n_final": { "type": "integer", "minimum": 0, "description": "n_final of the highest-lift shiller among those with n_final >= 5; 0 if none." },
+            "shillers_with_10plus": { "type": "integer", "minimum": 0, "description": "Shillers with n_final >= 10." },
+            "similar_cases": { "type": "integer", "minimum": 0, "description": "Length of `similar`." },
+            "shillers_with_onchain": { "type": "integer", "minimum": 0, "description": "Shillers with wallet-trade data before `t`. Absent in rows created before 21.10.2026." },
+            "shillers_holding": { "type": "integer", "minimum": 0, "description": "Shillers holding the token at `t`. Absent in older rows." }
+          }
+        },
+        "risks": {
+          "type": "array",
+          "uniqueItems": true,
+          "description": "Risk codes shown next to the score.",
+          "items": {
+            "enum": [
+              "creator_rugged_before",
+              "shiller_rug_history",
+              "single_shiller",
+              "low_evidence",
+              "late_entry",
+              "unknown_creation",
+              "kol_fast_dumper",
+              "kol_sold_after_call",
+              "kol_bought_before_call"
+            ]
+          }
+        }
+      }
+    },
+    "shillerInside": {
+      "type": "object",
+      "description": "One shiller who is already in. History counts are over this shiller's past tokens with a final first-mention outcome at `t` (each token once, current token excluded, attribution rule from docs/signals.md).",
+      "required": ["kol_id", "username", "followers", "first_mention_at", "minute", "n_final", "success", "rug", "success_rate", "success_lb", "lift", "rug_rate", "rug_lb", "rug_lift"],
+      "additionalProperties": false,
+      "properties": {
+        "kol_id": { "type": "integer", "description": "`kols.id`." },
+        "username": { "type": ["string", "null"], "description": "X handle without @ at the time of scoring." },
+        "followers": { "type": ["integer", "null"], "description": "Follower count at scoring time." },
+        "first_mention_at": { "type": "string", "format": "date-time", "description": "This shiller's first tweet with the CA." },
+        "minute": { "type": "number", "description": "Minutes from token creation (or from the token's first mention if creation is unknown) to this shiller's first tweet." },
+        "n_final": { "type": "integer", "minimum": 0, "description": "Past tokens with a final label." },
+        "success": { "type": "integer", "minimum": 0, "description": "How many of them were `success`." },
+        "rug": { "type": "integer", "minimum": 0, "description": "How many were `rug`." },
+        "success_rate": { "type": "number", "minimum": 0, "maximum": 1, "description": "success / n_final (raw, not shrunk); 0 when n_final is 0." },
+        "success_lb": { "type": "number", "minimum": 0, "maximum": 1, "description": "Lower bound of the 95% Wilson interval of the success rate. Display only, no points." },
+        "lift": { "type": "number", "minimum": 0, "description": "Shrunk success rate (success + 10b) / (n_final + 10), divided by the base rate b. A newcomer is about 1." },
+        "rug_rate": { "type": "number", "minimum": 0, "maximum": 1, "description": "rug / n_final (raw)." },
+        "rug_lb": { "type": "number", "minimum": 0, "maximum": 1, "description": "Lower bound of the 95% Wilson interval of the rug rate. Display only." },
+        "rug_lift": { "type": "number", "minimum": 0, "description": "Shrunk rug rate divided by the base rug rate." },
+        "onchain": {
+          "description": "Wallet behaviour of this shiller at `t`. null when no wallet trades before `t` are known. Absent in rows created before 21.10.2026.",
+          "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/onchain" }]
+        }
+      }
+    },
+    "onchain": {
+      "type": "object",
+      "required": ["closed_positions", "median_hold_s", "fast_dump_share", "fast_dumper", "first_buy_at", "first_sell_at", "holding", "bought_before_call", "sold_after_call"],
+      "additionalProperties": false,
+      "properties": {
+        "closed_positions": { "type": "integer", "minimum": 0, "description": "Positions (wallet + mint) of this shiller closed by a sell at or before `t`." },
+        "median_hold_s": { "type": ["number", "null"], "description": "Median seconds from first buy to first sell over closed positions." },
+        "fast_dump_share": { "type": ["number", "null"], "minimum": 0, "maximum": 1, "description": "Share of closed positions held for less than 60 seconds." },
+        "fast_dumper": { "type": "boolean", "description": "closed_positions >= 3 and median_hold_s < 120." },
+        "first_buy_at": { "type": ["string", "null"], "format": "date-time", "description": "First buy of this token before `t`." },
+        "first_sell_at": { "type": ["string", "null"], "format": "date-time", "description": "First sell of this token after that buy, at or before `t`." },
+        "holding": { "type": "boolean", "description": "The shiller's last trade in this token at `t` was a buy." },
+        "bought_before_call": { "type": "boolean", "description": "First buy happened before the first tweet. A flag only; no points." },
+        "sold_after_call": { "type": "boolean", "description": "A sell in the 30 minutes after the first tweet." }
+      }
+    }
+  }
+}

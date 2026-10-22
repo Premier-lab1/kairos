@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "outcome.schema.json",
+  "title": "Token outcome",
+  "description": "One row of the `token_outcomes` table: how a token ended on one horizon, from one reference point, under one rule version. Labels and thresholds: docs/outcomes.md. Source: backend/migrations/0001_init.sql, backend/kairos/outcomes.py.",
+  "type": "object",
+  "required": ["token_id", "horizon", "rule_version", "reference", "reference_time", "label", "computed_at"],
+  "additionalProperties": false,
+  "properties": {
+    "token_id": { "type": "integer", "description": "`tokens.id`. The primary key is (token_id, horizon, rule_version, reference)." },
+    "horizon": { "type": "string", "description": "Length of the evaluated window as a PostgreSQL interval string. 1 hour is `01:00:00`, 24 hours is printed `1 day`, 7 days is `7 days`.", "examples": ["01:00:00", "1 day", "7 days"] },
+    "rule_version": { "type": "string", "description": "Labelling rules version. `v1` is kept for comparison; `v2` adds the `fast_dump` and `pump_and_dump` rug reasons.", "examples": ["v1", "v2"] },
+    "reference": { "enum": ["creation", "first_mention"], "description": "Where the window starts. `creation`: token creation (what happens to this creator's tokens). `first_mention`: first CA mention by a shiller (was it worth looking at when the shill happened). Scoring uses `first_mention` for shillers and `creation` for creators." },
+    "reference_time": { "type": "string", "format": "date-time", "description": "The reference moment." },
+    "label": { "enum": ["success", "rug", "dead", "neutral", "pending", "no_data"], "description": "Checked in this order, first match wins: `no_data` (no price data on the horizon, final only after it ends), `pending` (horizon not finished or trades not yet loaded to its end), `rug`, `success`, `dead`, `neutral`." },
+    "peak_multiple": { "type": ["number", "null"], "description": "Peak market cap on the horizon divided by the market cap at the reference point." },
+    "end_multiple": { "type": ["number", "null"], "description": "Market cap at the end of the horizon divided by the reference market cap." },
+    "max_drawdown": { "type": ["number", "null"], "minimum": 0, "maximum": 1, "description": "1 - (minimum after the peak / peak)." },
+    "liquidity_alive": { "type": ["boolean", "null"], "description": "At the end of the horizon the curve or pool still holds at least 50% of its peak liquidity and at least 5 SOL." },
+    "migrated": { "type": ["boolean", "null"], "description": "The token left the bonding curve for a pool before the end of the horizon." },
+    "metrics": {
+      "type": ["object", "null"],
+      "description": "Evidence behind the label. Keys depend on the label and rule version; the ones below are the common ones, extra keys are allowed.",
+      "additionalProperties": true,
+      "properties": {
+        "now": { "type": "string", "format": "date-time", "description": "Computation time." },
+        "ref_ts": { "type": "string", "format": "date-time", "description": "Timestamp of the price point used as reference." },
+        "ref_cap": { "type": "number", "description": "Reference market cap in SOL." },
+        "ref_lookahead": { "type": "boolean", "description": "True if the reference price had to be taken from after the reference time (within 2 minutes)." },
+        "horizon_end": { "type": "string", "format": "date-time" },
+        "finished": { "type": "boolean", "description": "The horizon has ended." },
+        "peak_cap": { "type": "number", "description": "Peak market cap in SOL." },
+        "peak_ts": { "type": "string", "format": "date-time" },
+        "end_cap": { "type": "number", "description": "Market cap at the end of the horizon, SOL." },
+        "end_ts": { "type": "string", "format": "date-time" },
+        "end_staleness_s": { "type": "number", "description": "Seconds between the last data point and the end of the horizon." },
+        "min_after_peak": { "type": "number", "description": "Lowest market cap after the peak, SOL." },
+        "peak_liq": { "type": "number", "description": "Peak real liquidity in SOL." },
+        "end_liq": { "type": "number", "description": "Liquidity at the end, SOL." },
+        "end_liq_ts": { "type": "string", "format": "date-time" },
+        "liquidity_unknown": { "type": "boolean", "description": "No liquidity data; liquidity rules are skipped." },
+        "points_in_window": { "type": "integer", "description": "Data points inside the window." },
+        "cap_points_after_ref": { "type": "integer" },
+        "despiked_points": { "type": "integer", "description": "Single-point price spikes (bad prints) removed before labelling." },
+        "coverage": {
+          "type": "object",
+          "description": "How much of the horizon has trade data.",
+          "properties": {
+            "complete": { "type": "boolean" },
+            "truncated": { "type": "boolean", "description": "The trade backfill hit its credit cap." },
+            "synced_until": { "type": ["string", "null"], "format": "date-time" }
+          }
+        },
+        "creator": {
+          "type": "object",
+          "description": "Creator sell evidence for the rug rule 'creator sold more than 50% in the first hour' (the hour starts at the reference point).",
+          "properties": {
+            "base": { "type": ["number", "null"], "description": "Tokens the creator is known to have held." },
+            "held_at_start": { "type": "number" },
+            "bought_in_window": { "type": "number" },
+            "sold_in_window": { "type": "number" },
+            "share": { "type": ["number", "null"], "description": "sold_in_window / base; null if the base is unknown (the rule then does not fire)." },
+            "base_unknown": { "type": "boolean" },
+            "window_start": { "type": "string", "format": "date-time" },
+            "window_end": { "type": "string", "format": "date-time" }
+          }
+        },
+        "liquidity_crash": { "type": ["object", "null"], "description": "Evidence of a liquidity drop of more than 80% within 10 minutes (from_*, to_*, drop, seconds); null if none was found." },
+        "fast_dump": { "type": ["object", "null"], "description": "v2 only. Evidence of a market-cap drop of more than 90% within 30 minutes (from_cap, to_cap, drop, seconds, timestamps); null if none." },
+        "pump_and_dump": { "type": ["object", "null"], "description": "v2 only. Evidence of a peak of at least 3x followed within 30 minutes by giving back at least 90% of the gain; null if none." },
+        "rug_reasons": {
+          "type": "array",
+          "description": "Why the token was labelled `rug`. Present only for rugs.",
+          "items": { "enum": ["liquidity_crash", "creator_sold", "collapse", "fast_dump", "pump_and_dump"] }
+        },
+        "pending_reason": { "enum": ["horizon_not_finished", "data_incomplete"], "description": "Why the label is `pending`." },
+        "no_data_reason": { "type": "string", "description": "Why the label is `no_data`." }
+      }
+    },
+    "computed_at": { "type": "string", "format": "date-time", "description": "When the row was last (re)computed." }
+  }
+}

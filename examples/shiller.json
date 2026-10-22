@@ -1,0 +1,30 @@
+{
+  "id": 6,
+  "twitter_id": "2067486006073233408",
+  "username": "solhousesignals",
+  "display_name": "Solhouse Signal",
+  "followers_count": 2880,
+  "smart_followers_count": 0,
+  "smart_followers_final": true,
+  "tracked": true,
+  "first_seen_at": "2026-10-18T15:57:33.346081+00:00",
+  "last_mention_at": "2026-10-22T13:19:12+00:00",
+  "stats": {
+    "ca_count": 221,
+    "calls": 221,
+    "finals": 0,
+    "wins": 0,
+    "rugs": 0,
+    "median_entry_minute": 13.75,
+    "win_rate": null,
+    "rug_rate": null,
+    "wilson_lower_bound": 0.0,
+    "hold": {
+      "positions": 0,
+      "closed_positions": 0,
+      "median_hold_s": null,
+      "fast_dump_share": null
+    }
+  },
+  "wallets": []
+}

@@ -1,0 +1,71 @@
+{
+  "label": "rug",
+  "horizon": "01:00:00",
+  "metrics": {
+    "now": "2026-10-21T19:11:43.844003+00:00",
+    "end_ts": "2026-10-20T18:21:46+00:00",
+    "ref_ts": "2026-10-20T17:22:44+00:00",
+    "creator": {
+      "base": 0.0,
+      "share": null,
+      "window_end": "2026-10-20T18:22:44+00:00",
+      "base_unknown": false,
+      "window_start": "2026-10-20T17:22:44+00:00",
+      "held_at_start": 0.0,
+      "sold_in_window": 0.0,
+      "bought_in_window": 0.0
+    },
+    "end_cap": 2.756505,
+    "end_liq": 2.426817,
+    "peak_ts": "2026-10-20T17:26:27+00:00",
+    "ref_cap": 91.416716,
+    "coverage": {
+      "complete": true,
+      "truncated": true,
+      "synced_until": "2026-10-21T10:01:44+00:00"
+    },
+    "finished": true,
+    "peak_cap": 102.176487,
+    "peak_liq": 34.533035,
+    "fast_dump": {
+      "drop": 0.969073,
+      "to_ts": "2026-10-20T17:26:33+00:00",
+      "to_cap": 2.827281,
+      "from_ts": "2026-10-20T17:22:44+00:00",
+      "seconds": 229.0,
+      "from_cap": 91.416716
+    },
+    "end_liq_ts": "2026-10-20T18:21:46+00:00",
+    "horizon_end": "2026-10-20T18:22:44+00:00",
+    "rug_reasons": [
+      "liquidity_crash",
+      "collapse",
+      "fast_dump"
+    ],
+    "pump_and_dump": null,
+    "ref_lookahead": false,
+    "min_after_peak": 2.756505,
+    "despiked_points": 2,
+    "end_staleness_s": 58.0,
+    "liquidity_crash": {
+      "drop": 0.923227,
+      "to_ts": "2026-10-20T17:26:33+00:00",
+      "to_sol": 2.482647,
+      "from_ts": "2026-10-20T17:22:49+00:00",
+      "seconds": 224.0,
+      "from_sol": 32.33734
+    },
+    "points_in_window": 111,
+    "cap_points_after_ref": 110
+  },
+  "migrated": true,
+  "token_id": 62582,
+  "reference": "first_mention",
+  "computed_at": "2026-10-21T19:11:43.844003+00:00",
+  "end_multiple": 0.030153,
+  "max_drawdown": 0.973022,
+  "rule_version": "v2",
+  "peak_multiple": 1.1177,
+  "reference_time": "2026-10-20T17:22:44+00:00",
+  "liquidity_alive": false
+}

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "shiller.schema.json",
+  "title": "Shiller (KOL)",
+  "description": "An X account that posted a contract address (`kols` table), with the statistics the dashboard computes from its mentions and outcomes. The stats block mirrors the dashboard query in web/src/lib/server/queries/shillers.ts. Source: backend/migrations/0001_init.sql, 0002, 0008, 0011.",
+  "type": "object",
+  "required": ["id", "username", "first_seen_at"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "integer", "description": "Primary key (`kols.id`)." },
+    "twitter_id": { "type": ["string", "null"], "description": "Stable X user id. Handles can change; identity is kept on this id." },
+    "username": { "type": "string", "description": "Current X handle without @." },
+    "display_name": { "type": ["string", "null"] },
+    "bio": { "type": ["string", "null"], "description": "Profile bio at last fetch." },
+    "avatar_url": { "type": ["string", "null"], "description": "Profile picture URL from Frontrun." },
+    "followers_count": { "type": ["integer", "null"], "description": "Followers at last update." },
+    "smart_followers_count": { "type": ["integer", "null"], "description": "Smart followers (SMARTS) from Frontrun; null until fetched." },
+    "smart_followers_final": { "type": ["boolean", "null"], "description": "Frontrun `meta.resolved`: false means the count was still being computed and is refreshed within a day." },
+    "tracked": { "type": "boolean", "description": "True once the author passed the follower threshold (`KOL_MIN_FOLLOWERS`, 1000) or was added otherwise; tracked shillers get CA history and wallet lookups." },
+    "first_seen_at": { "type": "string", "format": "date-time", "description": "When Kairos first stored this account." },
+    "last_mention_at": { "type": ["string", "null"], "format": "date-time", "description": "Time of the most recent tweet with a CA." },
+    "stats": {
+      "type": "object",
+      "description": "Derived statistics. They are computed on read, not stored in `kols`. Outcome counts use first-mention outcomes at 24 h under rule set v2, with the attribution rule (only tokens this shiller mentioned within 60 minutes of the token's first mention).",
+      "required": ["ca_count", "calls", "finals", "wins", "rugs", "median_entry_minute", "win_rate", "rug_rate", "wilson_lower_bound", "hold"],
+      "additionalProperties": false,
+      "properties": {
+        "ca_count": { "type": "integer", "minimum": 0, "description": "Distinct contract addresses this shiller posted, including tokens not yet in `tokens`." },
+        "calls": { "type": "integer", "minimum": 0, "description": "Distinct known tokens this shiller mentioned." },
+        "finals": { "type": "integer", "minimum": 0, "description": "Calls with a final label (`success`, `rug`, `dead` or `neutral`) that count for this shiller." },
+        "wins": { "type": "integer", "minimum": 0, "description": "Calls labelled `success`." },
+        "rugs": { "type": "integer", "minimum": 0, "description": "Calls labelled `rug`." },
+        "median_entry_minute": { "type": ["number", "null"], "description": "Median minutes from token creation to this shiller's first call, over tokens with a reliable creation time." },
+        "win_rate": { "type": ["number", "null"], "minimum": 0, "maximum": 1, "description": "wins / finals; null when finals is 0." },
+        "rug_rate": { "type": ["number", "null"], "minimum": 0, "maximum": 1, "description": "rugs / finals; null when finals is 0." },
+        "wilson_lower_bound": { "type": "number", "minimum": 0, "maximum": 1, "description": "Lower bound of the 95% Wilson interval of the win rate. Used to rank shillers; 0 when finals is 0." },
+        "hold": {
+          "type": "object",
+          "description": "On-chain holding behaviour from the `kol_hold_stats` view (migration 0012). Zeros and nulls when no wallet trades are tracked.",
+          "required": ["positions", "closed_positions", "median_hold_s", "fast_dump_share"],
+          "additionalProperties": false,
+          "properties": {
+            "positions": { "type": "integer", "minimum": 0, "description": "Positions (wallet + mint) with a first buy." },
+            "closed_positions": { "type": "integer", "minimum": 0, "description": "Positions with a later sell." },
+            "median_hold_s": { "type": ["number", "null"], "description": "Median seconds from first buy to first sell." },
+            "fast_dump_share": { "type": ["number", "null"], "minimum": 0, "maximum": 1, "description": "Share of closed positions held under 60 seconds." }
+          }
+        }
+      }
+    },
+    "wallets": {
+      "type": "array",
+      "description": "Wallets linked to this shiller (`kol_wallets` joined with `wallets`). Public addresses only.",
+      "items": {
+        "type": "object",
+        "required": ["address", "relation"],
+        "additionalProperties": false,
+        "properties": {
+          "address": { "type": "string", "description": "Solana wallet address." },
+          "relation": { "enum": ["associated", "mentioned", "fomo", "manual"], "description": "How the wallet is linked to the account, as reported by Frontrun or added by hand." }
+        }
+      }
+    }
+  }
+}
