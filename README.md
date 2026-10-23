@@ -18,6 +18,14 @@
   <a href="https://x.com/max_reporter">X</a>
 </p>
 
+**$KAIROS contract address (Solana)** · [pump.fun](https://pump.fun/coin/Hz721fHpNgsBE7AAoBf4HYgsxm7JXqn39QENUdVopump) · [Solscan](https://solscan.io/token/Hz721fHpNgsBE7AAoBf4HYgsxm7JXqn39QENUdVopump)
+
+```
+Hz721fHpNgsBE7AAoBf4HYgsxm7JXqn39QENUdVopump
+```
+
+Tokens with the same name can exist on pump.fun; the official one has exactly this address.
+
 # Kairos
 
 Early signals for Solana trenches. Kairos watches new pump.fun tokens, finds which X (Twitter) shillers are already posting the contract address, and checks how those shillers' past calls ended. It does this before the crowd arrives.
